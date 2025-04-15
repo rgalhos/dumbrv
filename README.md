@@ -1,0 +1,3 @@
+The RISC-V Instruction Set Manual Volume I https://drive.google.com/file/d/1uviu1nH-tScFfgrovvFCrj7Omv8tFtkp/view
+
+https://www.researchgate.net/publication/360788701_Research_and_design_of_low-power_high-performance_processor_based_on_RISC-V_instruction_set_architecture/fulltext/638e33dae42faa7e759b0ce8/Research-and-design-of-low-power-high-performance-processor-based-on-RISC-V-instruction-set-architecture.pdf?origin=publication_detail&_tp=eyJjb250ZXh0Ijp7ImZpcnN0UGFnZSI6Il9kaXJlY3QiLCJwYWdlIjoicHVibGljYXRpb25Eb3dubG9hZCIsInByZXZpb3VzUGFnZSI6Il9kaXJlY3QifX0
