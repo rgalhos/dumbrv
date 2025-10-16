@@ -8,7 +8,6 @@
 #include "memory.h"
 #include "utils.h"
 #include <assert.h>
-#include <byteswap.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>

@@ -8,6 +8,7 @@ const char *const rv_register_list[rv_reg_max] = {
 
 const rv_opcode_data rv_opcode_list[rv_opcode_max] = {
     // clang-format off
+    // RV32I
   {"illegal", rv_codec_illegal, ""},
     {"lui", rv_codec_u, rv_fmt_u},
     {"auipc", rv_codec_u, rv_fmt_u},
@@ -47,21 +48,36 @@ const rv_opcode_data rv_opcode_list[rv_opcode_max] = {
     {"or", rv_codec_r, rv_fmt_r},
     {"and", rv_codec_r, rv_fmt_r},
     {"fence", rv_codec_u, "todo"}, // <-- check later
-    {"ecall", rv_codec_i, rv_fmt_i},
-    {"ebreak", rv_codec_i, rv_fmt_i},
-    {"lwu", rv_codec_u, "todo"},
-    {"ld", rv_codec_u, "todo"},
-    {"sd", rv_codec_u, "todo"},
-    {"addiw", rv_codec_u, "todo"},
-    {"slliw", rv_codec_u, "todo"},
-    {"srliw", rv_codec_u, "todo"},
-    {"sraiw", rv_codec_u, "todo"},
-    {"addw", rv_codec_u, "todo"},
-    {"subw", rv_codec_u, "todo"},
-    {"sllw", rv_codec_u, "todo"},
-    {"srlw", rv_codec_u, "todo"},
-    {"sraw", rv_codec_u, "todo"},
+    {"ecall", rv_codec_i, rv_fmt_i}, // <-- check later
+    {"ebreak", rv_codec_i, rv_fmt_i}, // <-- check later
+    // RV64I
+    {"lwu", rv_codec_i, rv_fmt_i},
+    {"ld", rv_codec_i, rv_fmt_i},
+    {"sd", rv_codec_s, rv_fmt_s},
+    {"addiw", rv_codec_i, rv_fmt_i},
+    {"slliw", rv_codec_i, rv_fmt_i},
+    {"srliw", rv_codec_i, rv_fmt_i},
+    {"sraiw", rv_codec_i, rv_fmt_i},
+    {"addw", rv_codec_r, rv_fmt_r},
+    {"subw", rv_codec_r, rv_fmt_r},
+    {"sllw", rv_codec_r, rv_fmt_r},
+    {"srlw", rv_codec_r, rv_fmt_r},
+    {"sraw", rv_codec_r, rv_fmt_r},
+    // RV32M
+    {"mul", rv_codec_r, rv_fmt_r},
+    {"mulh", rv_codec_r, rv_fmt_r},
+    {"mulhsu", rv_codec_r, rv_fmt_r},
+    {"mulhu", rv_codec_r, rv_fmt_r},
+    {"div", rv_codec_r, rv_fmt_r},
+    {"divu", rv_codec_r, rv_fmt_r},
+    {"rem", rv_codec_r, rv_fmt_r},
+    {"remu", rv_codec_r, rv_fmt_r},
     // RV64M
+    {"mulw", rv_codec_r, rv_fmt_r},
+    {"divw", rv_codec_r, rv_fmt_r},
+    {"divuw", rv_codec_r, rv_fmt_r},
+    {"remw", rv_codec_r, rv_fmt_r},
+    {"remuw", rv_codec_r, rv_fmt_r},
     // clang-format on
 };
 
@@ -129,7 +145,7 @@ inline int64_t sext_b(uint32_t imm) {
 }
 
 // U-type: imm[31:12]
-inline int64_t sext_u(uint32_t imm) { return (int64_t)imm; }
+inline int64_t sext_u(uint32_t imm) { return ((int64_t)imm); }
 
 // J-type: imm[20|10:1|11|19:12], 12 bits
 inline int64_t sext_j(uint32_t imm) {

@@ -8,6 +8,7 @@
 
 struct rv_dram {
   uint8_t *mem;
+  uint64_t size;
 };
 
 void dram_write(uint8_t *, uint64_t, size_t, uint8_t);

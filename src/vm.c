@@ -25,8 +25,10 @@ int vm_init(struct vm_data *vm, size_t memsize) {
     exit(ENOMEM);
   }
 
+  cpu->bus.dram.size = memsize;
   cpu->reg[rv_reg_zero] = 0;
   cpu->reg[rv_reg_sp] = RV_DRAM_BASE + memsize;
+  cpu->xlen = RV_ARCH_RV64; // @todo
   cpu->pc = RV_DRAM_BASE;
   vm->cpu = cpu;
 

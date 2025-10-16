@@ -9,6 +9,10 @@
 #define RV_ILEN 32
 #define RV_IALIGN 32
 
+#define RV_ARCH_RV32 50
+#define RV_ARCH_RV64 51
+#define RV_ARCH_RV128 52
+
 #if RV_XLEN == 32
 #define RV_UINT_XLEN uint32_t
 #define RV_INT_XLEN int32_t
@@ -62,6 +66,7 @@ struct rv_bus {
 struct rv_cpu {
   RV_UINT_XLEN reg[rv_reg_max];
   RV_UINT_XLEN pc;
+  uint8_t xlen;
 
   struct rv_bus bus;
 };

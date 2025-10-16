@@ -3,7 +3,7 @@
 
 void dram_write(uint8_t *dram, const size_t addr, RV_UINT_XLEN val,
                 uint8_t size) {
-  memcpy(dram + addr - RV_DRAM_BASE, &val, size / 8);
+  // memcpy(dram + addr - RV_DRAM_BASE, &val, size / 8);
 
   switch (size) {
 #if RV_XLEN == 64

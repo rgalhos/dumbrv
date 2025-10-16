@@ -22,32 +22,26 @@ typedef enum {
 
 typedef enum {
   rv_opcode_illegal = 0,
-  // opcode 0b0110111
+
+  // RV32I
   rv_opcode_lui,
-  // opcode 0b0010111
   rv_opcode_auipc,
-  // opcode 0b1101111
   rv_opcode_jal,
-  // opcode 0b1100111
   rv_opcode_jalr,
-  // opcode 0b1100011
   rv_opcode_beq,
   rv_opcode_bne,
   rv_opcode_blt,
   rv_opcode_bge,
   rv_opcode_bltu,
   rv_opcode_bgeu,
-  // opcode 0b0000011
   rv_opcode_lb,
   rv_opcode_lh,
   rv_opcode_lw,
   rv_opcode_lbu,
   rv_opcode_lhu,
-  // opcode 0b0100011
   rv_opcode_sb,
   rv_opcode_sh,
   rv_opcode_sw,
-  // opcode 0b0010011
   rv_opcode_addi,
   rv_opcode_slti,
   rv_opcode_sltiu,
@@ -57,7 +51,6 @@ typedef enum {
   rv_opcode_slli,
   rv_opcode_srli,
   rv_opcode_srai,
-  // opcode 0b0110011
   rv_opcode_add,
   rv_opcode_sub,
   rv_opcode_sll,
@@ -68,12 +61,11 @@ typedef enum {
   rv_opcode_sra,
   rv_opcode_or,
   rv_opcode_and,
-  // fence
   rv_opcode_fence,
-  // opcode 0b1110011
   rv_opcode_ecall,
   rv_opcode_ebreak,
-  // :::
+
+  // RV64I
   rv_opcode_lwu,
   rv_opcode_ld,
   rv_opcode_sd,
@@ -86,6 +78,23 @@ typedef enum {
   rv_opcode_sllw,
   rv_opcode_srlw,
   rv_opcode_sraw,
+
+  // RV32M
+  rv_opcode_mul,
+  rv_opcode_mulh,
+  rv_opcode_mulhsu,
+  rv_opcode_mulhu,
+  rv_opcode_div,
+  rv_opcode_divu,
+  rv_opcode_rem,
+  rv_opcode_remu,
+
+  // RV64M
+  rv_opcode_mulw,
+  rv_opcode_divw,
+  rv_opcode_divuw,
+  rv_opcode_remw,
+  rv_opcode_remuw,
 
   rv_opcode_max
 } rv_opcode;
