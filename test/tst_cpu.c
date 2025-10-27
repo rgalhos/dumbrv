@@ -36,46 +36,45 @@ Test(mv, init_and_shutdown) {
 Test(cpu, exec_lui) {
   VM_INIT(vm);
 
-  // 0x004d2737 = lui a4, 1234
-  // 0xfffff7b7 = lui a5, 1048575 (-1)
-  // 0x00000837 = lui a6, 1048576 (0) (overflow = 0)
-  // 0x000018b7 = lui a7, 1
-  SET_VM_MEM(vm, 5, ARR({0x004d2737, 0x03039737, 0x1e240737, 0x2d687737, 0}));
+  SET_VM_MEM(vm, 6,
+             ARR({
+                 0x00000637, // lui a2, 0
+                 0xfffff6b7, // lui a3, 0xfffff
+                 0x004d2737, // lui a4, 0x004d2 (1234)
+                 0x030397b7, // lui a5, 0x03039 (12345)
+                 0x1e240837, // lui a6, 0x1e240 (123456)
+                 0xc0ffe8b7, // lui a7, 0xc0ffe
+                 0,
+             }));
 
   cpu_execute(vm.cpu);
 
-  cr_expect_eq((signed)vm.cpu->reg[rv_reg_a4], 1234);
-  cr_expect_eq((signed)vm.cpu->reg[rv_reg_a5], 12345);
-  cr_expect_eq((signed)vm.cpu->reg[rv_reg_a6], 123456);
-  cr_expect_eq((signed)vm.cpu->reg[rv_reg_a7], 1234567);
-
-  cr_log_warn("aaaaaaaaaaa %lld %lld %lld %lld",
-              (signed long long)vm.cpu->reg[rv_reg_a4],
-              (signed long long)vm.cpu->reg[rv_reg_a5],
-              (signed long long)vm.cpu->reg[rv_reg_a6],
-              (signed long long)vm.cpu->reg[rv_reg_a7]);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a2], 0);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a3], 0xfffff);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a4], 1234);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a5], 12345);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a6], 123456);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a7], 0xc0ffe);
 
   VM_SHUTDOWN(vm);
 }
 
 Test(cpu, exec_auipc) {
-  // auipc
-}
-
-Test(cpu, exec_jal) {
   VM_INIT(vm);
 
-  // jal a4, 768
-  SET_VM_MEM(vm, 2, ARR({0x3000076f, 0}));
+  SET_VM_MEM(vm, 4,
+             ARR({
+                 0x00000597, // auipc a1, 0
+                 0x00400617, // auipc a2, 1024
+                 0xffffc697, // auipc a3, -4
+                 0x0,        // end
+             }));
 
   cpu_execute(vm.cpu);
 
-  cr_expect_eq(vm.cpu->pc, 768 + 4);
-  cr_expect_eq(vm.cpu->reg[rv_reg_a4], 8);
-
-  cr_log_warn("aaaaaaaaaaa %llu %llu",
-              (unsigned long long)vm.cpu->reg[rv_reg_a4],
-              (unsigned long long)vm.cpu->pc);
+  cr_assert_eq(vm.cpu->reg[rv_reg_a1], RV_DRAM_BASE + 0);
+  cr_assert_eq(vm.cpu->reg[rv_reg_a2], RV_DRAM_BASE + 4 * 1 + 1024);
+  cr_assert_eq(vm.cpu->reg[rv_reg_a3], RV_DRAM_BASE + 4 * 2 - 4);
 
   VM_SHUTDOWN(vm);
 }
@@ -96,6 +95,86 @@ Test(cpu, exec_add) {
 
   cr_expect_eq(vm.cpu->reg[rv_reg_a1], ((uint64_t)-1) + 1024);
   cr_expect_eq(vm.cpu->reg[rv_reg_a5], 24690);
+
+  VM_SHUTDOWN(vm);
+}
+
+Test(cpu, exec_jal) {
+  VM_INIT(vm);
+
+  SET_VM_MEM(vm, 8,
+             ARR({
+                 0x004000ef, // jal ra, +4
+                 0x02a00793, // addi a5, zero, 42 // jump this one
+                 0x06300813, // addi a6, zero, 99
+                 0x0080076f, // jal a4, +8
+                 0x04500593, // addi a1, zero, 69   // jump this
+                 0x53900613, // addi a2, zero, 1337 // jump this
+                 0xabc00693, // addi a3, zero, 0xABC
+                 0x00000000  // end
+             }));
+
+  vm.cpu->reg[rv_reg_a1] = 0xC0FFE;
+  vm.cpu->reg[rv_reg_a2] = 0xC0FFE;
+  vm.cpu->reg[rv_reg_a5] = 0xC0FFE;
+
+  cpu_execute(vm.cpu);
+
+  cr_expect_eq(vm.cpu->reg[rv_reg_ra], RV_DRAM_BASE + 4);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a5], 0xC0FFE);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a6], 99);
+
+  cr_expect_eq(vm.cpu->reg[rv_reg_a4], RV_DRAM_BASE + 4 * 4);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a1], 0xC0FFE);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a2], 0xC0FFE);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a3], 0xABC);
+
+  VM_SHUTDOWN(vm);
+}
+
+Test(cpu, exec_jalr) {
+  VM_INIT(vm);
+
+  // jalr ra, 8(ra)
+  // addi t0, zero, 42     // should be skipped
+  // addi t1, zero, 99
+  // end
+  // addi t2, zero, 666
+  // auipc a7, zero
+  // jalr a7, -8(ra)
+
+  SET_VM_MEM(vm, 8,
+             ARR({
+                 0x004080e7, // jalr ra, ra, +4       (jump to ra + 4)
+                 0x02a00793, // addi a5, zero, 42     // should be skipped
+                 0x06300813, // addi a6, zero, 99
+                 0x00408767, // jalr a4, ra, +4       (jump again)
+                 0x04500593, // addi a1, zero, 69     // should be skipped
+                 0x53900613, // addi a2, zero, 1337   // should be skipped
+                 0xabc00693, // addi a3, zero, 0xABC
+                 0x00000000  // end
+             }));
+
+  // Initialize registers
+  vm.cpu->reg[rv_reg_ra] = RV_DRAM_BASE;
+  vm.cpu->reg[rv_reg_a1] = 0xC0FFE;
+  vm.cpu->reg[rv_reg_a2] = 0xC0FFE;
+  vm.cpu->reg[rv_reg_a5] = 0xC0FFE;
+
+  cpu_execute(vm.cpu);
+
+  // First jalr: rd=ra, jumps to ra+4
+  cr_expect_eq(vm.cpu->reg[rv_reg_ra], RV_DRAM_BASE + 4);
+  // The skipped instruction didn’t run
+  cr_expect_eq(vm.cpu->reg[rv_reg_a5], 0xC0FFE);
+  // The next executed instruction set a6=99
+  cr_expect_eq(vm.cpu->reg[rv_reg_a6], 99);
+
+  // Second jalr: rd=a4, jumps to (ra + 4)
+  cr_expect_eq(vm.cpu->reg[rv_reg_a4], RV_DRAM_BASE + 8);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a1], 0xC0FFE);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a2], 0xC0FFE);
+  cr_expect_eq(vm.cpu->reg[rv_reg_a3], 0xABC);
 
   VM_SHUTDOWN(vm);
 }
