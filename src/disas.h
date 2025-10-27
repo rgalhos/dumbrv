@@ -3,11 +3,9 @@
 
 #include "cpu.h"
 #include "log.h"
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 typedef enum {
   rv_codec_illegal,
@@ -99,30 +97,28 @@ typedef enum {
   rv_opcode_max
 } rv_opcode;
 
-typedef struct {
+struct rv_opcode_data {
   const char *const name;
   const rv_codec codec;
   const char *const fmt;
-} rv_opcode_data;
+};
 
-typedef struct {
+struct rv_decode {
   uint32_t inst;
-  rv_codec codec;
+  uint8_t codec; // rv_codec
 
-  uint16_t op;
+  uint16_t op; // rv_opcode
   uint8_t rd;
   uint8_t rs1;
   uint8_t rs2;
   uint8_t rs3;
   uint32_t imm;
-  uint8_t funct3;
-  uint8_t funct7;
 
   // fence
   uint8_t fm;
   uint8_t pred;
   uint8_t succ;
-} rv_decode;
+};
 
 // #define rv_fmt_r "O d,1,s"
 #define rv_fmt_r "O d,1,2"
@@ -137,8 +133,8 @@ int64_t sext_s(uint32_t imm);
 int64_t sext_b(uint32_t imm);
 int64_t sext_u(uint32_t imm);
 int64_t sext_j(uint32_t imm);
-void decode_inst(rv_decode *);
-size_t format_inst(const rv_decode, char *, const size_t);
+void decode_inst(struct rv_decode *);
+size_t format_inst(const struct rv_decode, char *, const size_t);
 const char *reg_name(rv_reg);
 
 #endif // DISAS_H

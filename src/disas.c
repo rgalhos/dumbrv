@@ -6,7 +6,7 @@ const char *const rv_register_list[rv_reg_max] = {
     "s6",   "s7", "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6",
 };
 
-const rv_opcode_data rv_opcode_list[rv_opcode_max] = {
+const struct rv_opcode_data rv_opcode_list[rv_opcode_max] = {
     // clang-format off
     // RV32I
   {"illegal", rv_codec_illegal, ""},
@@ -113,65 +113,51 @@ static inline uint32_t operand_simm12(const uint32_t inst) {
   return (operand_iimm12(inst) << 5) | operand_funct3(inst);
 }
 
-static inline uint32_t operand_imm20(const uint32_t inst) {
-  return ((inst >> 31) & 0x1) << 20 | ((inst >> 21) & 0x3FF) << 1 |
-         ((inst >> 20) & 0x1) << 11 | ((inst >> 12) & 0xFF) << 12;
+static inline uint32_t operand_imm_u(const uint32_t inst) { return inst >> 12; }
+
+static inline uint32_t operand_imm_j(const uint32_t inst) {
+  int32_t imm = ((inst >> 31) << 20) | (((inst >> 12) & 0xFF) << 12) |
+                (((inst >> 20) & 0x1) << 11) | (((inst >> 21) & 0x3FF) << 1);
+  if (imm & 0x100000)
+    imm |= 0xFFE00000;
+
+  return imm;
 }
 
 inline int64_t sext_i(uint32_t imm) {
-#if RV_XLEN == 32
-  return (int32_t)(imm << 20) >> 20;
-#else
   return (int64_t)((uint64_t)imm << 52) >> 52;
-#endif
 }
 
 // S-type: imm[11:5] + imm[4:0] combined
 inline int64_t sext_s(uint32_t imm) {
-#if RV_XLEN == 32
-  return (int32_t)(imm << 20) >> 20;
-#else
   return (int64_t)((uint64_t)imm << 52) >> 52;
-#endif
 }
 
 // B-type: imm[12|10:5|4:1|11] combined, sign-extended
 inline int64_t sext_b(uint32_t imm) {
-#if RV_XLEN == 32
-  return (int32_t)(imm << 19) >> 19;
-#else
   return (int64_t)((uint64_t)imm << 51) >> 51;
-#endif
 }
 
 // U-type: imm[31:12]
-inline int64_t sext_u(uint32_t imm) { return ((int64_t)imm); }
+inline int64_t sext_u(uint32_t imm) { return ((int32_t)(imm << 12)) >> 12; }
 
 // J-type: imm[20|10:1|11|19:12], 12 bits
 inline int64_t sext_j(uint32_t imm) {
-#if RV_XLEN == 32
-  return (int32_t)(imm << 12) >> 12;
-#else
   return (int64_t)((uint64_t)imm << 44) >> 44;
-#endif
 }
 
-void decode_inst(rv_decode *dec) {
-  assert(dec != NULL);
-
+void decode_inst(struct rv_decode *dec) {
   const uint32_t inst = dec->inst;
   const uint32_t opcode = operand_opcode(inst);
-  dec->funct3 = operand_funct3(inst);
-  dec->funct7 = operand_funct7(inst);
 
   rv_opcode op = rv_opcode_illegal;
 
   switch (opcode) {
     // clang-format off
   case 0b0110011 /* rv_opcode_add */: {
-    switch (dec->funct3) {
+    switch (operand_funct3(inst)) {
       case 0x0: {
-        switch (dec->funct7) {
+        switch (operand_funct7(inst)) {
           case 0x00: op = rv_opcode_add; break;
           case 0x20: op = rv_opcode_sub; break;
         }
@@ -187,14 +173,14 @@ void decode_inst(rv_decode *dec) {
   } break;
 
   case 0b0010011 /* rv_opcode_addi */: {
-    switch (dec->funct3) {
+    switch (operand_funct3(inst)) {
       case 0x0: op = rv_opcode_addi;  break;
       case 0x1: op = rv_opcode_slli;  break;
       case 0x2: op = rv_opcode_slti;  break;
       case 0x3: op = rv_opcode_sltiu; break;
       case 0x4: op = rv_opcode_xori;  break;
       case 0x5: {
-        switch(dec->funct7) {
+        switch(operand_funct7(inst)) {
           case 0x00: op = rv_opcode_srli; break;
           case 0x20: op = rv_opcode_srai; break;
         }
@@ -205,7 +191,7 @@ void decode_inst(rv_decode *dec) {
   } break;
 
   case 0b0000011 /* rv_opcode_lb  */: {
-    switch (dec->funct3) {
+    switch (operand_funct3(inst)) {
       case 0x0: op = rv_opcode_lb;  break;
       case 0x1: op = rv_opcode_lh;  break;
       case 0x2: op = rv_opcode_lw;  break;
@@ -215,7 +201,7 @@ void decode_inst(rv_decode *dec) {
   } break;
 
   case 0b0100011 /* rv_opcode_sb */: {
-    switch (dec->funct3) {
+    switch (operand_funct3(inst)) {
       case 0x0: op = rv_opcode_sb; break;
       case 0x1: op = rv_opcode_sh; break;
       case 0x2: op = rv_opcode_sw; break;
@@ -223,7 +209,7 @@ void decode_inst(rv_decode *dec) {
   } break;
 
   case 0b1100011 /* rv_opcode_beq */: {
-    switch (dec->funct3) {
+    switch (operand_funct3(inst)) {
       case 0x0: op = rv_opcode_beq;  break;
       case 0x1: op = rv_opcode_bne;  break;
       case 0x4: op = rv_opcode_blt;  break;
@@ -250,7 +236,7 @@ void decode_inst(rv_decode *dec) {
   } break;
 
   case 0b1110011 /* rv_opcode_ecall */: {
-    switch (dec->funct7) {
+    switch (operand_funct7(inst)) {
       case 0x0: op = rv_opcode_ecall;  break;
       case 0x1: op = rv_opcode_ebreak; break;
     }
@@ -259,8 +245,6 @@ void decode_inst(rv_decode *dec) {
   }
 
   if (op == rv_opcode_illegal) {
-    memset(dec, 0, sizeof(*dec));
-
     dec->op = rv_opcode_illegal;
     dec->codec = rv_codec_illegal;
 
@@ -269,21 +253,36 @@ void decode_inst(rv_decode *dec) {
 
   dec->op = op;
   dec->codec = rv_opcode_list[dec->op].codec;
-  dec->rd = (rv_reg)operand_rd(inst);
-  dec->rs1 = (rv_reg)operand_rs1(inst);
-  dec->rs2 = (rv_reg)operand_rs2(inst);
 
   switch ((rv_codec)dec->codec) {
+  case rv_codec_r:
+    dec->rd = (rv_reg)operand_rd(inst);
+    dec->rs1 = (rv_reg)operand_rs1(inst);
+    dec->rs2 = (rv_reg)operand_rs2(inst);
+    break;
   case rv_codec_i:
+    dec->rd = (rv_reg)operand_rd(inst);
+    dec->rs1 = (rv_reg)operand_rs1(inst);
     dec->imm = operand_iimm12(inst);
     break;
   case rv_codec_s:
+    dec->rs1 = (rv_reg)operand_rs1(inst);
+    dec->rs2 = (rv_reg)operand_rs2(inst);
+    // s-type imm provavelmente não é essa função
+    dec->imm = operand_simm12(inst);
+    break;
   case rv_codec_b:
+    dec->rs1 = (rv_reg)operand_rs1(inst);
+    dec->rs2 = (rv_reg)operand_rs2(inst);
     dec->imm = operand_simm12(inst);
     break;
   case rv_codec_u:
+    dec->rd = (rv_reg)operand_rd(inst);
+    dec->imm = operand_imm_u(inst); // ok
+    break;
   case rv_codec_j:
-    dec->imm = operand_imm20(inst);
+    dec->rd = (rv_reg)operand_rd(inst);
+    dec->imm = operand_imm_j(inst); // ok
     break;
   default:
     dec->imm = 0;
@@ -292,13 +291,13 @@ void decode_inst(rv_decode *dec) {
 
   LOG_TRACE("decode_inst: op: %d, funct3: %d, funct7: %d, rd: %d, "
             "rs1: %d, rs2: %d, imm: %d, inst 0x%x",
-            dec->op, dec->funct3, dec->funct7, dec->rd, dec->rs1, dec->rs2,
-            dec->imm, dec->inst);
+            dec->op, operand_funct3(inst), operand_funct7(inst), dec->rd,
+            dec->rs1, dec->rs2, dec->imm, dec->inst);
 }
 
 const char *reg_name(rv_reg r) { return rv_register_list[r]; }
 
-size_t format_inst(const rv_decode dec, char *buf, const size_t maxlen) {
+size_t format_inst(const struct rv_decode dec, char *buf, const size_t maxlen) {
   char c, *fmt = (char *)rv_opcode_list[dec.op].fmt;
   size_t n = 0;
 

@@ -27,7 +27,7 @@ TESTS_BINS := $(patsubst $(TESTS_DIR)/%.c, $(TESTS_OUT_DIR)/%.bin, $(TESTS))
 
 .PHONY: all vm tests clean
 
-all: vm tests
+all: vm
 
 vm: $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(OUT_DIR)/dumb-vm $(SRCS) $(ENTRYPOINT) $(LIBS)
